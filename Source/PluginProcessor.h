@@ -6,9 +6,22 @@
   ==============================================================================
 */
 
+//stopped editing at 51:52
+
 #pragma once
 
 #include <JuceHeader.h>
+
+// extract parameters from audio processor value tree state, create a data structure representing all parameter values.
+struct ChainSettings
+{
+    float bandPassFreq { 0 }, bandPassGainInDecibels{ 0 }, bandPassQuality {1.f};
+    float highPassFreq { 0 }, lowPassFreq { 0 };
+    int highPassSlope { 0 }, lowPassSlope { 0 };
+};
+
+// define helper function that will give us all parameter values in the data struct
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
 
 //==============================================================================
 /**
@@ -73,6 +86,13 @@ private:
     
     //two instances of mono to create stereo.
     MonoChain leftChain, rightChain;
+    
+    enum ChainPositions
+    {
+        highPass,
+        bandPass,
+        lowPass
+    };
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RuckusEQAudioProcessor)

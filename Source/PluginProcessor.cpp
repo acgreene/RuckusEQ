@@ -104,6 +104,14 @@ void RuckusEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     
     leftChain.prepare(spec);
     rightChain.prepare(spec);
+    
+    auto chainSettings = getChainSettings(apvts);
+    
+    auto bandPassCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.bandPassFreq, chainSettings.bandPassQuality, juce::Decibels::decibelsToGain(chainSettings.bandPassGainInDecibels));
+    
+    *leftChain.get<ChainPositions::bandPass>().coefficients = *bandPassCoefficients;
+    *rightChain.get<ChainPositions::bandPass>().coefficients = *bandPassCoefficients;
+    
 }
 
 void RuckusEQAudioProcessor::releaseResources()
@@ -148,6 +156,13 @@ void RuckusEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     // clears any output channels that didn't contain input data
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
+    
+    auto chainSettings = getChainSettings(apvts);
+    
+    auto bandPassCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.bandPassFreq, chainSettings.bandPassQuality, juce::Decibels::decibelsToGain(chainSettings.bandPassGainInDecibels));
+    
+    *leftChain.get<ChainPositions::bandPass>().coefficients = *bandPassCoefficients;
+    *rightChain.get<ChainPositions::bandPass>().coefficients = *bandPassCoefficients;
 
     // points to data in the audio buffer
     juce::dsp::AudioBlock<float> block(buffer);
@@ -191,6 +206,23 @@ void RuckusEQAudioProcessor::setStateInformation (const void* data, int sizeInBy
     // whose contents will have been created by the getStateInformation() call.
 }
 
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
+{
+    ChainSettings settings;
+    
+    settings.highPassFreq = apvts.getRawParameterValue("HighPass Freq")->load();
+    settings.highPassSlope = apvts.getRawParameterValue("HighPass Slope")->load();
+    
+    settings.lowPassFreq = apvts.getRawParameterValue("LowPass Freq")->load();
+    settings.lowPassSlope = apvts.getRawParameterValue("LowPass Slope")->load();
+    
+    settings.bandPassFreq = apvts.getRawParameterValue("BandPass Freq")->load();
+    settings.bandPassGainInDecibels = apvts.getRawParameterValue("BandPass Gain")->load();
+    settings.bandPassQuality = apvts.getRawParameterValue("BandPass Q")->load();
+    
+    return settings;
+}
+
 //sets up all of the configurable parameters in the plugin to be passed into the audio processor value tree state constructor.
 juce::AudioProcessorValueTreeState::ParameterLayout
     RuckusEQAudioProcessor::createParameterLayout()
@@ -200,17 +232,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout
         
         layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("HighPass Freq", 1),
                                                                "HighPass Freq",
-                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f),
+                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
                                                                20.f));
         
         layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("LowPass Freq", 1),
                                                                "LowPass Freq",
-                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f),
+                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
                                                                20000.f));
         
         layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("BandPass Freq", 1),
                                                                "BandPass Freq",
-                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f),
+                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
                                                                750.f));
         
         layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("BandPass Gain", 1),
