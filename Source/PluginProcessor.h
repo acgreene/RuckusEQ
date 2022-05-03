@@ -60,6 +60,20 @@ public:
     juce::AudioProcessorValueTreeState apvts {*this, nullptr, "Parameters", createParameterLayout()};
 
 private:
+    //create Filter type alias to make code cleaner
+    //filter has a response of 12 dB/Oct when it's configured as a HPF or LPF
+    using Filter = juce::dsp::IIR::Filter<float>;
+    
+    //to do dsp in juce we need to create a series of processing, defined as a processing chain, and then pass a context through it.
+    //if we use four 12 dB/Oct filters, we can create a 48 dB/Oct filter.
+    using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+    
+    //the entire mono signal path is HPF -> BPF -> LPF
+    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
+    
+    //two instances of mono to create stereo.
+    MonoChain leftChain, rightChain;
+    
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RuckusEQAudioProcessor)
 };
