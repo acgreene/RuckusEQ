@@ -112,6 +112,106 @@ void RuckusEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     *leftChain.get<ChainPositions::bandPass>().coefficients = *bandPassCoefficients;
     *rightChain.get<ChainPositions::bandPass>().coefficients = *bandPassCoefficients;
     
+    //slope choice 0: 12 dB/Oct -> order: 2
+    //slope choice 1: 24 dB/Oct -> order: 4
+    //slope choice 2: 36 dB/Oct -> order: 6, etc.. => 2*(slope+1)=order
+    auto filterCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.highPassFreq, sampleRate, 2*(chainSettings.highPassSlope + 1));
+    
+    auto& leftHighPass = leftChain.get<ChainPositions::highPass>();
+    
+    leftHighPass.setBypassed<0>(true);
+    leftHighPass.setBypassed<1>(true);
+    leftHighPass.setBypassed<2>(true);
+    leftHighPass.setBypassed<3>(true);
+    
+    switch(chainSettings.highPassSlope)
+    {
+        case Slope_12:
+        {
+            *leftHighPass.get<0>().coefficients = *filterCoefficients[0];
+            leftHighPass.setBypassed<0>(false);
+            break;
+        }
+        case Slope_24:
+        {
+            *leftHighPass.get<0>().coefficients = *filterCoefficients[0];
+            leftHighPass.setBypassed<0>(false);
+            *leftHighPass.get<1>().coefficients = *filterCoefficients[1];
+            leftHighPass.setBypassed<1>(false);
+            break;
+        }
+        case Slope_36:
+        {
+            *leftHighPass.get<0>().coefficients = *filterCoefficients[0];
+            leftHighPass.setBypassed<0>(false);
+            *leftHighPass.get<1>().coefficients = *filterCoefficients[1];
+            leftHighPass.setBypassed<1>(false);
+            *leftHighPass.get<2>().coefficients = *filterCoefficients[2];
+            leftHighPass.setBypassed<2>(false);
+            break;
+        }
+        case Slope_48:
+        {
+            *leftHighPass.get<0>().coefficients = *filterCoefficients[0];
+            leftHighPass.setBypassed<0>(false);
+            *leftHighPass.get<1>().coefficients = *filterCoefficients[1];
+            leftHighPass.setBypassed<1>(false);
+            *leftHighPass.get<2>().coefficients = *filterCoefficients[2];
+            leftHighPass.setBypassed<2>(false);
+            *leftHighPass.get<3>().coefficients = *filterCoefficients[3];
+            leftHighPass.setBypassed<3>(false);
+            break;
+        }
+    }
+    
+    //right chain
+    auto& rightHighPass = rightChain.get<ChainPositions::highPass>();
+    
+    rightHighPass.setBypassed<0>(true);
+    rightHighPass.setBypassed<1>(true);
+    rightHighPass.setBypassed<2>(true);
+    rightHighPass.setBypassed<3>(true);
+    
+    switch(chainSettings.highPassSlope)
+    {
+        case Slope_12:
+        {
+            *rightHighPass.get<0>().coefficients = *filterCoefficients[0];
+            rightHighPass.setBypassed<0>(false);
+            break;
+        }
+        case Slope_24:
+        {
+            *rightHighPass.get<0>().coefficients = *filterCoefficients[0];
+            rightHighPass.setBypassed<0>(false);
+            *rightHighPass.get<1>().coefficients = *filterCoefficients[1];
+            rightHighPass.setBypassed<1>(false);
+            break;
+        }
+        case Slope_36:
+        {
+            *rightHighPass.get<0>().coefficients = *filterCoefficients[0];
+            rightHighPass.setBypassed<0>(false);
+            *rightHighPass.get<1>().coefficients = *filterCoefficients[1];
+            rightHighPass.setBypassed<1>(false);
+            *rightHighPass.get<2>().coefficients = *filterCoefficients[2];
+            rightHighPass.setBypassed<2>(false);
+            break;
+        }
+        case Slope_48:
+        {
+            *rightHighPass.get<0>().coefficients = *filterCoefficients[0];
+            rightHighPass.setBypassed<0>(false);
+            *rightHighPass.get<1>().coefficients = *filterCoefficients[1];
+            rightHighPass.setBypassed<1>(false);
+            *rightHighPass.get<2>().coefficients = *filterCoefficients[2];
+            rightHighPass.setBypassed<2>(false);
+            *rightHighPass.get<3>().coefficients = *filterCoefficients[3];
+            rightHighPass.setBypassed<3>(false);
+            break;
+        }
+    }
+    
 }
 
 void RuckusEQAudioProcessor::releaseResources()
@@ -164,6 +264,106 @@ void RuckusEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     *leftChain.get<ChainPositions::bandPass>().coefficients = *bandPassCoefficients;
     *rightChain.get<ChainPositions::bandPass>().coefficients = *bandPassCoefficients;
 
+    //slope choice 0: 12 dB/Oct -> order: 2
+    //slope choice 1: 24 dB/Oct -> order: 4
+    //slope choice 2: 36 dB/Oct -> order: 6, etc.. => 2*(slope+1)=order
+    auto filterCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.highPassFreq, getSampleRate(), 2*(chainSettings.highPassSlope + 1));
+    
+    auto& leftHighPass = leftChain.get<ChainPositions::highPass>();
+    
+    leftHighPass.setBypassed<0>(true);
+    leftHighPass.setBypassed<1>(true);
+    leftHighPass.setBypassed<2>(true);
+    leftHighPass.setBypassed<3>(true);
+    
+    switch(chainSettings.highPassSlope)
+    {
+        case Slope_12:
+        {
+            *leftHighPass.get<0>().coefficients = *filterCoefficients[0];
+            leftHighPass.setBypassed<0>(false);
+            break;
+        }
+        case Slope_24:
+        {
+            *leftHighPass.get<0>().coefficients = *filterCoefficients[0];
+            leftHighPass.setBypassed<0>(false);
+            *leftHighPass.get<1>().coefficients = *filterCoefficients[1];
+            leftHighPass.setBypassed<1>(false);
+            break;
+        }
+        case Slope_36:
+        {
+            *leftHighPass.get<0>().coefficients = *filterCoefficients[0];
+            leftHighPass.setBypassed<0>(false);
+            *leftHighPass.get<1>().coefficients = *filterCoefficients[1];
+            leftHighPass.setBypassed<1>(false);
+            *leftHighPass.get<2>().coefficients = *filterCoefficients[2];
+            leftHighPass.setBypassed<2>(false);
+            break;
+        }
+        case Slope_48:
+        {
+            *leftHighPass.get<0>().coefficients = *filterCoefficients[0];
+            leftHighPass.setBypassed<0>(false);
+            *leftHighPass.get<1>().coefficients = *filterCoefficients[1];
+            leftHighPass.setBypassed<1>(false);
+            *leftHighPass.get<2>().coefficients = *filterCoefficients[2];
+            leftHighPass.setBypassed<2>(false);
+            *leftHighPass.get<3>().coefficients = *filterCoefficients[3];
+            leftHighPass.setBypassed<3>(false);
+            break;
+        }
+    }
+    
+    //right chain
+    auto& rightHighPass = rightChain.get<ChainPositions::highPass>();
+    
+    rightHighPass.setBypassed<0>(true);
+    rightHighPass.setBypassed<1>(true);
+    rightHighPass.setBypassed<2>(true);
+    rightHighPass.setBypassed<3>(true);
+    
+    switch(chainSettings.highPassSlope)
+    {
+        case Slope_12:
+        {
+            *rightHighPass.get<0>().coefficients = *filterCoefficients[0];
+            rightHighPass.setBypassed<0>(false);
+            break;
+        }
+        case Slope_24:
+        {
+            *rightHighPass.get<0>().coefficients = *filterCoefficients[0];
+            rightHighPass.setBypassed<0>(false);
+            *rightHighPass.get<1>().coefficients = *filterCoefficients[1];
+            rightHighPass.setBypassed<1>(false);
+            break;
+        }
+        case Slope_36:
+        {
+            *rightHighPass.get<0>().coefficients = *filterCoefficients[0];
+            rightHighPass.setBypassed<0>(false);
+            *rightHighPass.get<1>().coefficients = *filterCoefficients[1];
+            rightHighPass.setBypassed<1>(false);
+            *rightHighPass.get<2>().coefficients = *filterCoefficients[2];
+            rightHighPass.setBypassed<2>(false);
+            break;
+        }
+        case Slope_48:
+        {
+            *rightHighPass.get<0>().coefficients = *filterCoefficients[0];
+            rightHighPass.setBypassed<0>(false);
+            *rightHighPass.get<1>().coefficients = *filterCoefficients[1];
+            rightHighPass.setBypassed<1>(false);
+            *rightHighPass.get<2>().coefficients = *filterCoefficients[2];
+            rightHighPass.setBypassed<2>(false);
+            *rightHighPass.get<3>().coefficients = *filterCoefficients[3];
+            rightHighPass.setBypassed<3>(false);
+            break;
+        }
+    }
+    
     // points to data in the audio buffer
     juce::dsp::AudioBlock<float> block(buffer);
     
@@ -211,10 +411,10 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
     ChainSettings settings;
     
     settings.highPassFreq = apvts.getRawParameterValue("HighPass Freq")->load();
-    settings.highPassSlope = apvts.getRawParameterValue("HighPass Slope")->load();
+    settings.highPassSlope = static_cast<Slope>(apvts.getRawParameterValue("HighPass Slope")->load());
     
     settings.lowPassFreq = apvts.getRawParameterValue("LowPass Freq")->load();
-    settings.lowPassSlope = apvts.getRawParameterValue("LowPass Slope")->load();
+    settings.lowPassSlope = static_cast<Slope>(apvts.getRawParameterValue("LowPass Slope")->load());
     
     settings.bandPassFreq = apvts.getRawParameterValue("BandPass Freq")->load();
     settings.bandPassGainInDecibels = apvts.getRawParameterValue("BandPass Gain")->load();
