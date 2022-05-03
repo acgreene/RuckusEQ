@@ -166,7 +166,8 @@ bool RuckusEQAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* RuckusEQAudioProcessor::createEditor()
 {
-    return new RuckusEQAudioProcessorEditor (*this);
+    //return new RuckusEQAudioProcessorEditor (*this);
+    return new juce::GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -181,6 +182,52 @@ void RuckusEQAudioProcessor::setStateInformation (const void* data, int sizeInBy
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+}
+
+//sets up all of the configurable parameters in the plugin to be passed into the audio processor value tree state constructor.
+juce::AudioProcessorValueTreeState::ParameterLayout
+    RuckusEQAudioProcessor::createParameterLayout()
+{
+        juce::AudioProcessorValueTreeState::ParameterLayout layout;
+       
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("HighPass Freq", 1),
+                                                               "HighPass Freq",
+                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f),
+                                                               20.f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("LowPass Freq", 1),
+                                                               "LowPass Freq",
+                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f),
+                                                               20000.f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("BandPass Freq", 1),
+                                                               "BandPass Freq",
+                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f),
+                                                               750.f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("BandPass Gain", 1),
+                                                               "BandPass Gain",
+                                                               juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
+                                                               0.0f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("BandPass Q", 1),
+                                                               "BandPass Q",
+                                                               juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f),
+                                                               1.f));
+        
+        juce::StringArray filterSlopes;
+        for (int i = 0; i < 4; i++) {
+            juce::String slope;
+            slope << (12 + i*12);
+            slope << " dB/Oct";
+            filterSlopes.add(slope);
+        }
+        
+        layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("HighPass Slope", 1), "HighPass Slope", filterSlopes, 0));
+        layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("LowPass Slope", 1), "LowPass Slope", filterSlopes, 0));
+        
+        return layout;
 }
 
 //==============================================================================

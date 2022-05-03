@@ -17,8 +17,8 @@ class RuckusEQAudioProcessor  : public juce::AudioProcessor
 {
 public:
     //==============================================================================
-    RuckusEQAudioProcessor();
-    ~RuckusEQAudioProcessor() override;
+    RuckusEQAudioProcessor(); //constructor
+    ~RuckusEQAudioProcessor() override; //destructor
 
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
@@ -52,6 +52,12 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+    
+    //provides a list of all parameters and their attributes within the plugin.
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    
+    //contains a value tree that is used to manage an audio processors entire state. connects audio parameters to gui.
+    juce::AudioProcessorValueTreeState apvts {*this, nullptr, "Parameters", createParameterLayout()};
 
 private:
     //==============================================================================
