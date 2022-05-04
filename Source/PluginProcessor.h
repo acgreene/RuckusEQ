@@ -6,8 +6,6 @@
   ==============================================================================
 */
 
-//stopped editing at 51:52
-
 #pragma once
 
 #include <JuceHeader.h>
@@ -23,7 +21,24 @@ enum Slope
 // extract parameters from audio processor value tree state, create a data structure representing all parameter values.
 struct ChainSettings
 {
-    float bandPassFreq { 0 }, bandPassGainInDecibels{ 0 }, bandPassQuality {1.f};
+    //Rumble 20Hz-200Hz
+    float rumbleFreq { 0 }, rumbleGainInDecibels{ 0 }, rumbleQuality {1.f};
+    
+    //Lows 150Hz-400Hz
+    float lowFreq { 0 }, lowGainInDecibels{ 0 }, lowQuality {1.f};
+    
+    //Low-Mids 0.35kHz-1.5kHz
+    float lowMidFreq { 0 }, lowMidGainInDecibels{ 0 }, lowMidQuality {1.f};
+    
+    //High-Mids 1kHz-6kHz
+    float highMidFreq { 0 }, highMidGainInDecibels{ 0 }, highMidQuality {1.f};
+    
+    //Highs 5kHz-16kHz
+    float highFreq { 0 }, highGainInDecibels{ 0 }, highQuality {1.f};
+    
+    //Air 12kHz-22kHz
+    float airFreq { 0 }, airGainInDecibels{ 0 }, airQuality {1.f};
+    
     float highPassFreq { 0 }, lowPassFreq { 0 };
     Slope highPassSlope { Slope::Slope_12 }, lowPassSlope { Slope::Slope_12 };
 };
@@ -89,8 +104,8 @@ private:
     //if we use four 12 dB/Oct filters, we can create a 48 dB/Oct filter.
     using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
     
-    //the entire mono signal path is HPF -> BPF -> LPF
-    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
+    //the entire mono signal path is HPF -> rumble -> low -> lowMid -> highMid -> high -> air -> LPF
+    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, Filter, Filter, Filter, Filter, Filter, CutFilter>;
     
     //two instances of mono to create stereo.
     MonoChain leftChain, rightChain;
@@ -98,7 +113,12 @@ private:
     enum ChainPositions
     {
         highPass,
-        bandPass,
+        rumble,
+        low,
+        lowMid,
+        highMid,
+        high,
+        air,
         lowPass
     };
     

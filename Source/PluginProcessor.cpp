@@ -205,19 +205,70 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
     settings.lowPassFreq = apvts.getRawParameterValue("LowPass Freq")->load();
     settings.lowPassSlope = static_cast<Slope>(apvts.getRawParameterValue("LowPass Slope")->load());
     
-    settings.bandPassFreq = apvts.getRawParameterValue("BandPass Freq")->load();
-    settings.bandPassGainInDecibels = apvts.getRawParameterValue("BandPass Gain")->load();
-    settings.bandPassQuality = apvts.getRawParameterValue("BandPass Q")->load();
+    settings.rumbleFreq = apvts.getRawParameterValue("Rumble Freq")->load();
+    settings.rumbleGainInDecibels = apvts.getRawParameterValue("Rumble Gain")->load();
+    settings.rumbleQuality = apvts.getRawParameterValue("Rumble Q")->load();
+    
+    settings.lowFreq = apvts.getRawParameterValue("Low Freq")->load();
+    settings.lowGainInDecibels = apvts.getRawParameterValue("Low Gain")->load();
+    settings.lowQuality = apvts.getRawParameterValue("Low Q")->load();
+    
+    settings.lowMidFreq = apvts.getRawParameterValue("LowMid Freq")->load();
+    settings.lowMidGainInDecibels = apvts.getRawParameterValue("LowMid Gain")->load();
+    settings.lowMidQuality = apvts.getRawParameterValue("LowMid Q")->load();
+    
+    settings.highMidFreq = apvts.getRawParameterValue("HighMid Freq")->load();
+    settings.highMidGainInDecibels = apvts.getRawParameterValue("HighMid Gain")->load();
+    settings.highMidQuality = apvts.getRawParameterValue("HighMid Q")->load();
+    
+    settings.highFreq = apvts.getRawParameterValue("High Freq")->load();
+    settings.highGainInDecibels = apvts.getRawParameterValue("High Gain")->load();
+    settings.highQuality = apvts.getRawParameterValue("High Q")->load();
+    
+    settings.airFreq = apvts.getRawParameterValue("Air Freq")->load();
+    settings.airGainInDecibels = apvts.getRawParameterValue("Air Gain")->load();
+    settings.airQuality = apvts.getRawParameterValue("Air Q")->load();
     
     return settings;
 }
 
 void RuckusEQAudioProcessor::updateBandPassFilter(const ChainSettings & chainSettings)
 {
-    auto bandPassCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.bandPassFreq, chainSettings.bandPassQuality, juce::Decibels::decibelsToGain(chainSettings.bandPassGainInDecibels));
+    //rumble
+    auto rumbleCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.rumbleFreq, chainSettings.rumbleQuality, juce::Decibels::decibelsToGain(chainSettings.rumbleGainInDecibels));
     
-    updateCoefficients(leftChain.get<ChainPositions::bandPass>().coefficients, bandPassCoefficients);
-    updateCoefficients(rightChain.get<ChainPositions::bandPass>().coefficients, bandPassCoefficients);
+    updateCoefficients(leftChain.get<ChainPositions::rumble>().coefficients, rumbleCoefficients);
+    updateCoefficients(rightChain.get<ChainPositions::rumble>().coefficients, rumbleCoefficients);
+    
+    //lows
+    auto lowCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.lowFreq, chainSettings.lowQuality, juce::Decibels::decibelsToGain(chainSettings.lowGainInDecibels));
+    
+    updateCoefficients(leftChain.get<ChainPositions::low>().coefficients, lowCoefficients);
+    updateCoefficients(rightChain.get<ChainPositions::low>().coefficients, lowCoefficients);
+    
+    //low-mids
+    auto lowMidCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.lowMidFreq, chainSettings.lowMidQuality, juce::Decibels::decibelsToGain(chainSettings.lowMidGainInDecibels));
+    
+    updateCoefficients(leftChain.get<ChainPositions::lowMid>().coefficients, lowMidCoefficients);
+    updateCoefficients(rightChain.get<ChainPositions::lowMid>().coefficients, lowMidCoefficients);
+    
+    //high-mids
+    auto highMidCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.highMidFreq, chainSettings.highMidQuality, juce::Decibels::decibelsToGain(chainSettings.highMidGainInDecibels));
+    
+    updateCoefficients(leftChain.get<ChainPositions::highMid>().coefficients, highMidCoefficients);
+    updateCoefficients(rightChain.get<ChainPositions::highMid>().coefficients, highMidCoefficients);
+    
+    //highs
+    auto highCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.highFreq, chainSettings.highQuality, juce::Decibels::decibelsToGain(chainSettings.highGainInDecibels));
+    
+    updateCoefficients(leftChain.get<ChainPositions::high>().coefficients, highCoefficients);
+    updateCoefficients(rightChain.get<ChainPositions::high>().coefficients, highCoefficients);
+    
+    //air
+    auto airCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.airFreq, chainSettings.airQuality, juce::Decibels::decibelsToGain(chainSettings.airGainInDecibels));
+    
+    updateCoefficients(leftChain.get<ChainPositions::air>().coefficients, airCoefficients);
+    updateCoefficients(rightChain.get<ChainPositions::air>().coefficients, airCoefficients);
 }
 
 void RuckusEQAudioProcessor::updateCoefficients(Coefficients& old, const Coefficients &replacements)
@@ -253,7 +304,6 @@ void RuckusEQAudioProcessor::updateFilters()
     updateHighPassFilters(chainSettings);
     updateBandPassFilter(chainSettings);
     updateLowPassFilters(chainSettings);
-    
 }
 
 //sets up all of the configurable parameters in the plugin to be passed into the audio processor value tree state constructor.
@@ -262,32 +312,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout
 {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
        
-        
-        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("HighPass Freq", 1),
-                                                               "HighPass Freq",
-                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
-                                                               20.f));
-        
-        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("LowPass Freq", 1),
-                                                               "LowPass Freq",
-                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
-                                                               20000.f));
-        
-        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("BandPass Freq", 1),
-                                                               "BandPass Freq",
-                                                               juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
-                                                               750.f));
-        
-        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("BandPass Gain", 1),
-                                                               "BandPass Gain",
-                                                               juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
-                                                               0.0f));
-        
-        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("BandPass Q", 1),
-                                                               "BandPass Q",
-                                                               juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f),
-                                                               1.f));
-        
         juce::StringArray filterSlopes;
         for (int i = 0; i < 4; i++) {
             juce::String slope;
@@ -296,8 +320,115 @@ juce::AudioProcessorValueTreeState::ParameterLayout
             filterSlopes.add(slope);
         }
         
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("HighPass Freq", 1),
+                                                               "HighPass Freq",
+                                                               juce::NormalisableRange<float>(10.f, 500.f, 1.f, 0.9f),
+                                                               10.f));
+        
         layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("HighPass Slope", 1), "HighPass Slope", filterSlopes, 0));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("LowPass Freq", 1),
+                                                               "LowPass Freq",
+                                                               juce::NormalisableRange<float>(3000.f, 21000.f, 1.f, 0.4f),
+                                                               21000.f));
+        
         layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("LowPass Slope", 1), "LowPass Slope", filterSlopes, 0));
+        
+        //Rumble
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Rumble Freq", 1),
+                                                               "Rumble Freq",
+                                                               juce::NormalisableRange<float>(20.f, 200.f, 1.f, 0.9f),
+                                                               75.f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Rumble Gain", 1),
+                                                               "Rumble Gain",
+                                                               juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
+                                                               0.0f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Rumble Q", 1),
+                                                               "Rumble Q",
+                                                               juce::NormalisableRange<float>(0.1f, 3.4f, 0.05f, 1.f),
+                                                               1.f));
+        
+        //Lows
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Low Freq", 1),
+                                                               "Low Freq",
+                                                               juce::NormalisableRange<float>(150.f, 400.f, 1.f, 0.85f),
+                                                               250.f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Low Gain", 1),
+                                                               "Low Gain",
+                                                               juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
+                                                               0.0f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Low Q", 1),
+                                                               "Low Q",
+                                                               juce::NormalisableRange<float>(0.1f, 3.4f, 0.05f, 1.f),
+                                                               1.f));
+        
+        //Low-mids
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("LowMid Freq", 1),
+                                                               "LowMid Freq",
+                                                               juce::NormalisableRange<float>(350.f, 1500.f, 1.f, 0.8f),
+                                                               250.f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("LowMid Gain", 1),
+                                                               "LowMid Gain",
+                                                               juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
+                                                               0.0f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("LowMid Q", 1),
+                                                               "LowMid Q",
+                                                               juce::NormalisableRange<float>(0.1f, 3.4f, 0.05f, 1.f),
+                                                               1.f));
+        
+        //High-mids
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("HighMid Freq", 1),
+                                                               "HighMid Freq",
+                                                               juce::NormalisableRange<float>(1000.f, 6000.f, 1.f, 0.65f),
+                                                               250.f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("HighMid Gain", 1),
+                                                               "HighMid Gain",
+                                                               juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
+                                                               0.0f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("HighMid Q", 1),
+                                                               "HighMid Q",
+                                                               juce::NormalisableRange<float>(0.1f, 3.4f, 0.05f, 1.f),
+                                                               1.f));
+        
+        //Highs
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("High Freq", 1),
+                                                               "High Freq",
+                                                               juce::NormalisableRange<float>(5000.f, 16000.f, 1.f, 0.5f),
+                                                               250.f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("High Gain", 1),
+                                                               "High Gain",
+                                                               juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
+                                                               0.0f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("High Q", 1),
+                                                               "High Q",
+                                                               juce::NormalisableRange<float>(0.1f, 2.f, 0.05f, 1.f),
+                                                               1.f));
+        
+        //Air
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Air Freq", 1),
+                                                               "Air Freq",
+                                                               juce::NormalisableRange<float>(14000.f, 22000.f, 1.f, 0.45f),
+                                                               250.f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Air Gain", 1),
+                                                               "Air Gain",
+                                                               juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
+                                                               0.0f));
+        
+        layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("Air Q", 1),
+                                                               "Air Q",
+                                                               juce::NormalisableRange<float>(0.1f, 1.2f, 0.05f, 1.f),
+                                                               1.f));
         
         return layout;
 }
