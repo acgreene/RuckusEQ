@@ -9,38 +9,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-//==============================================================================
-RuckusEQAudioProcessorEditor::RuckusEQAudioProcessorEditor (RuckusEQAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p),
-highPassFreqSliderAttachment(audioProcessor.apvts, "HighPass Freq", highPassFreqSlider),
-rumbleFreqSliderAttachment(audioProcessor.apvts, "Rumble Freq", rumbleFreqSlider),
-rumbleGainSliderAttachment(audioProcessor.apvts, "Rumble Gain", rumbleGainSlider),
-lowFreqSliderAttachment(audioProcessor.apvts, "Low Freq", lowFreqSlider),
-lowGainSliderAttachment(audioProcessor.apvts, "Low Gain", lowGainSlider),
-lowMidFreqSliderAttachment(audioProcessor.apvts, "LowMid Freq", lowMidFreqSlider),
-lowMidGainSliderAttachment(audioProcessor.apvts, "LowMid Gain", lowMidGainSlider),
-highMidFreqSliderAttachment(audioProcessor.apvts, "HighMid Freq", highMidFreqSlider),
-highMidGainSliderAttachment(audioProcessor.apvts, "HighMid Gain", highMidGainSlider),
-highFreqSliderAttachment(audioProcessor.apvts, "High Freq", highFreqSlider),
-highGainSliderAttachment(audioProcessor.apvts, "High Gain", highGainSlider),
-airFreqSliderAttachment(audioProcessor.apvts, "Air Freq", airFreqSlider),
-airGainSliderAttachment(audioProcessor.apvts, "Air Gain", airGainSlider),
-lowPassFreqSliderAttachment(audioProcessor.apvts, "LowPass Freq", lowPassFreqSlider),
-rumbleQualitySliderAttachment(audioProcessor.apvts, "Rumble Q", rumbleQualitySlider),
-lowQualitySliderAttachment(audioProcessor.apvts, "Low Q", lowQualitySlider),
-lowMidQualitySliderAttachment(audioProcessor.apvts, "LowMid Q", lowMidQualitySlider),
-highMidQualitySliderAttachment(audioProcessor.apvts, "HighMid Q", highMidQualitySlider),
-highQualitySliderAttachment(audioProcessor.apvts, "High Q", highQualitySlider),
-airQualitySliderAttachment(audioProcessor.apvts, "Air Q", airQualitySlider),
-highPassSlopeSliderAttachment(audioProcessor.apvts, "HighPass Slope", highPassSlopeSlider),
-lowPassSlopeSliderAttachment(audioProcessor.apvts, "LowPass Slope", lowPassSlopeSlider)
+ResponseCurveComponent::ResponseCurveComponent(RuckusEQAudioProcessor& p) : audioProcessor(p)
 {
-    //batch add all of the sliders to the gui
-    for(auto* comp: getComps())
-    {
-        addAndMakeVisible(comp);
-    }
-    
     //listen for when parameters change, grab parameters from audio processor and add ourselves as a listener to them.
     const auto& params = audioProcessor.getParameters();
     for(auto param : params)
@@ -50,11 +20,9 @@ lowPassSlopeSliderAttachment(audioProcessor.apvts, "LowPass Slope", lowPassSlope
     
     //start timer to check every 60Hz to see if we need to repaint the response curve
     startTimerHz(60);
-    
-    setSize (800, 533);
 }
 
-RuckusEQAudioProcessorEditor::~RuckusEQAudioProcessorEditor()
+ResponseCurveComponent::~ResponseCurveComponent()
 {
     //deregister as a listener when the destructor is called
     const auto& params = audioProcessor.getParameters();
@@ -64,19 +32,56 @@ RuckusEQAudioProcessorEditor::~RuckusEQAudioProcessorEditor()
     }
 }
 
-//==============================================================================
-void RuckusEQAudioProcessorEditor::paint (juce::Graphics& g)
+void ResponseCurveComponent::parameterValueChanged(int parameterIndex, float newValue)
+{
+    //set atomic flag to true if a plugin parameter is changed
+    parametersChanged.set(true);
+}
+
+//check if the parameters have been changed in the timer callback
+void ResponseCurveComponent::timerCallback()
+{
+    //only refresh the curve if a change has been made- if a change has been made set the parametersChanged back to false so the curve isn't being continuously refreshed.
+    if (parametersChanged.compareAndSetBool(false, true))
+    {
+        //update monochain
+        auto chainSettings = getChainSettings(audioProcessor.apvts);
+        
+        auto rumbleCoefficients = makeRumbleFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::rumble>().coefficients, rumbleCoefficients);
+        
+        auto lowCoefficients = makeLowFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::low>().coefficients, lowCoefficients);
+        
+        auto lowMidCoefficients = makeLowMidFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::lowMid>().coefficients, lowMidCoefficients);
+        
+        auto highMidCoefficients = makeHighMidFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::highMid>().coefficients, highMidCoefficients);
+        
+        auto highCoefficients = makeHighFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::high>().coefficients, highCoefficients);
+        
+        auto airCoefficients = makeAirFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::air>().coefficients, airCoefficients);
+        
+        auto highPassCoefficients = makeHighPassFilter(chainSettings, audioProcessor.getSampleRate());
+        updatePassFilter(monoChain.get<ChainPositions::highPass>(), highPassCoefficients, chainSettings.highPassSlope);
+        
+        auto lowPassCoefficients = makeLowPassFilter(chainSettings, audioProcessor.getSampleRate());
+        updatePassFilter(monoChain.get<ChainPositions::lowPass>(), lowPassCoefficients, chainSettings.lowPassSlope);
+        
+        //signal a repaint so a new response curve is drawn
+        repaint();
+    }
+}
+
+void ResponseCurveComponent::paint (juce::Graphics& g)
 {
     using namespace juce;
     
-    //color background of plugin
-    g.fillAll (Colours::black);
-    
-    //get plugin boundaries
-    auto bounds = getLocalBounds();
-    
-    //get the response curve area of the plugin
-    auto responseArea = bounds.removeFromTop(bounds.getHeight() * 0.6);
+    //get response curve area boundaries
+    auto responseArea = getLocalBounds();
     
     auto w = responseArea.getWidth();
     
@@ -172,6 +177,56 @@ void RuckusEQAudioProcessorEditor::paint (juce::Graphics& g)
     g.strokePath(responseCurve, PathStrokeType(2.f));
 }
 
+//==============================================================================
+RuckusEQAudioProcessorEditor::RuckusEQAudioProcessorEditor (RuckusEQAudioProcessor& p)
+    : AudioProcessorEditor (&p), audioProcessor (p),
+responseCurveComponent(audioProcessor),
+highPassFreqSliderAttachment(audioProcessor.apvts, "HighPass Freq", highPassFreqSlider),
+rumbleFreqSliderAttachment(audioProcessor.apvts, "Rumble Freq", rumbleFreqSlider),
+rumbleGainSliderAttachment(audioProcessor.apvts, "Rumble Gain", rumbleGainSlider),
+lowFreqSliderAttachment(audioProcessor.apvts, "Low Freq", lowFreqSlider),
+lowGainSliderAttachment(audioProcessor.apvts, "Low Gain", lowGainSlider),
+lowMidFreqSliderAttachment(audioProcessor.apvts, "LowMid Freq", lowMidFreqSlider),
+lowMidGainSliderAttachment(audioProcessor.apvts, "LowMid Gain", lowMidGainSlider),
+highMidFreqSliderAttachment(audioProcessor.apvts, "HighMid Freq", highMidFreqSlider),
+highMidGainSliderAttachment(audioProcessor.apvts, "HighMid Gain", highMidGainSlider),
+highFreqSliderAttachment(audioProcessor.apvts, "High Freq", highFreqSlider),
+highGainSliderAttachment(audioProcessor.apvts, "High Gain", highGainSlider),
+airFreqSliderAttachment(audioProcessor.apvts, "Air Freq", airFreqSlider),
+airGainSliderAttachment(audioProcessor.apvts, "Air Gain", airGainSlider),
+lowPassFreqSliderAttachment(audioProcessor.apvts, "LowPass Freq", lowPassFreqSlider),
+rumbleQualitySliderAttachment(audioProcessor.apvts, "Rumble Q", rumbleQualitySlider),
+lowQualitySliderAttachment(audioProcessor.apvts, "Low Q", lowQualitySlider),
+lowMidQualitySliderAttachment(audioProcessor.apvts, "LowMid Q", lowMidQualitySlider),
+highMidQualitySliderAttachment(audioProcessor.apvts, "HighMid Q", highMidQualitySlider),
+highQualitySliderAttachment(audioProcessor.apvts, "High Q", highQualitySlider),
+airQualitySliderAttachment(audioProcessor.apvts, "Air Q", airQualitySlider),
+highPassSlopeSliderAttachment(audioProcessor.apvts, "HighPass Slope", highPassSlopeSlider),
+lowPassSlopeSliderAttachment(audioProcessor.apvts, "LowPass Slope", lowPassSlopeSlider)
+{
+    //batch add all of the sliders to the gui
+    for(auto* comp: getComps())
+    {
+        addAndMakeVisible(comp);
+    }
+    
+    setSize (800, 533);
+}
+
+RuckusEQAudioProcessorEditor::~RuckusEQAudioProcessorEditor()
+{
+    
+}
+
+//==============================================================================
+void RuckusEQAudioProcessorEditor::paint (juce::Graphics& g)
+{
+    using namespace juce;
+    
+    //color background of plugin
+    g.fillAll (Colours::black);
+}
+
 //here is where the positions of the gui components are layed out in the plugin window
 void RuckusEQAudioProcessorEditor::resized()
 {
@@ -180,6 +235,7 @@ void RuckusEQAudioProcessorEditor::resized()
     
     //allocate top 40% of the plugin window for the frequency response curve
     auto responseArea = bounds.removeFromTop(bounds.getHeight() * 0.6);
+    responseCurveComponent.setBounds(responseArea);
     
     //allocate left 12.5% of bottom of window for HPF
     auto highPassArea = bounds.removeFromLeft(bounds.getWidth() * 0.125);
@@ -222,50 +278,6 @@ void RuckusEQAudioProcessorEditor::resized()
 
 }
 
-void RuckusEQAudioProcessorEditor::parameterValueChanged(int parameterIndex, float newValue)
-{
-    //set atomic flag to true if a plugin parameter is changed
-    parametersChanged.set(true);
-}
-
-//check if the parameters have been changed in the timer callback
-void RuckusEQAudioProcessorEditor::timerCallback()
-{
-    //only refresh the curve if a change has been made- if a change has been made set the parametersChanged back to false so the curve isn't being continuously refreshed. 
-    if (parametersChanged.compareAndSetBool(false, true))
-    {
-        //update monochain
-        auto chainSettings = getChainSettings(audioProcessor.apvts);
-        
-        auto rumbleCoefficients = makeRumbleFilter(chainSettings, audioProcessor.getSampleRate());
-        updateCoefficients(monoChain.get<ChainPositions::rumble>().coefficients, rumbleCoefficients);
-        
-        auto lowCoefficients = makeLowFilter(chainSettings, audioProcessor.getSampleRate());
-        updateCoefficients(monoChain.get<ChainPositions::low>().coefficients, lowCoefficients);
-        
-        auto lowMidCoefficients = makeLowMidFilter(chainSettings, audioProcessor.getSampleRate());
-        updateCoefficients(monoChain.get<ChainPositions::lowMid>().coefficients, lowMidCoefficients);
-        
-        auto highMidCoefficients = makeHighMidFilter(chainSettings, audioProcessor.getSampleRate());
-        updateCoefficients(monoChain.get<ChainPositions::highMid>().coefficients, highMidCoefficients);
-        
-        auto highCoefficients = makeHighFilter(chainSettings, audioProcessor.getSampleRate());
-        updateCoefficients(monoChain.get<ChainPositions::high>().coefficients, highCoefficients);
-        
-        auto airCoefficients = makeAirFilter(chainSettings, audioProcessor.getSampleRate());
-        updateCoefficients(monoChain.get<ChainPositions::air>().coefficients, airCoefficients);
-        
-        auto highPassCoefficients = makeHighPassFilter(chainSettings, audioProcessor.getSampleRate());
-        updatePassFilter(monoChain.get<ChainPositions::highPass>(), highPassCoefficients, chainSettings.highPassSlope);
-        
-        auto lowPassCoefficients = makeLowPassFilter(chainSettings, audioProcessor.getSampleRate());
-        updatePassFilter(monoChain.get<ChainPositions::lowPass>(), lowPassCoefficients, chainSettings.lowPassSlope);
-        
-        //signal a repaint so a new response curve is drawn
-        repaint();
-    }
-}
-
 std::vector<juce::Component*> RuckusEQAudioProcessorEditor::getComps()
 {
     return
@@ -277,6 +289,7 @@ std::vector<juce::Component*> RuckusEQAudioProcessorEditor::getComps()
         &highMidFreqSlider, &highMidGainSlider, &highMidQualitySlider,
         &highFreqSlider, &highGainSlider, &highQualitySlider,
         &airFreqSlider, &airGainSlider, &airQualitySlider,
-        &lowPassFreqSlider, &highPassSlopeSlider, &lowPassSlopeSlider
+        &lowPassFreqSlider, &highPassSlopeSlider, &lowPassSlopeSlider,
+        &responseCurveComponent
     };
 }
