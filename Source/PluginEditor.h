@@ -38,7 +38,10 @@ struct CustomHorizontalBar : juce::Slider
 //==============================================================================
 /**
 */
-class RuckusEQAudioProcessorEditor  : public juce::AudioProcessorEditor
+// for the editor to respond to parameter changes, register it as a listener to all of them. therefore the editor will inherit from the class "Listener".
+class RuckusEQAudioProcessorEditor  : public juce::AudioProcessorEditor,
+juce::AudioProcessorParameter::Listener,
+juce::Timer
 {
 public:
     RuckusEQAudioProcessorEditor (RuckusEQAudioProcessor&);
@@ -47,11 +50,16 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
+    
+    //editor callbacks happen on the audio thread, so we can't do any gui stuff (repainting, etc.) in the callback. instead we can set an atomic flag that the timer can check and update based on the flag.
+    void parameterValueChanged (int parameterIndex, float newValue) override;
+    void parameterGestureChanged (int parameterIndex, bool gestureIsStarting) override {}
+    void timerCallback() override; //query an atomic flag to decide if the chain needs updating and the component needs repainting.
 
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
     RuckusEQAudioProcessor& audioProcessor;
+    
+    juce::Atomic<bool> parametersChanged {false};
     
     CustomRotarySlider  highPassFreqSlider,
                         rumbleFreqSlider, rumbleGainSlider,

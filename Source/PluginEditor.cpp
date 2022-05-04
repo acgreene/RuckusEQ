@@ -50,12 +50,109 @@ RuckusEQAudioProcessorEditor::~RuckusEQAudioProcessorEditor()
 //==============================================================================
 void RuckusEQAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-
-    g.setColour (juce::Colours::white);
-    g.setFont (15.0f);
-    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+    using namespace juce;
+    
+    //color background of plugin
+    g.fillAll (Colours::black);
+    
+    //get plugin boundaries
+    auto bounds = getLocalBounds();
+    
+    //get the response curve area of the plugin
+    auto responseArea = bounds.removeFromTop(bounds.getHeight() * 0.6);
+    
+    auto w = responseArea.getWidth();
+    
+    //get the parameters of each of the filters
+    auto& highPass = monoChain.get<ChainPositions::highPass>();
+    auto& rumble = monoChain.get<ChainPositions::rumble>();
+    auto& low = monoChain.get<ChainPositions::low>();
+    auto& lowMid = monoChain.get<ChainPositions::lowMid>();
+    auto& highMid = monoChain.get<ChainPositions::highMid>();
+    auto& high = monoChain.get<ChainPositions::high>();
+    auto& air = monoChain.get<ChainPositions::air>();
+    auto& lowPass = monoChain.get<ChainPositions::lowPass>();
+    
+    auto sampleRate = audioProcessor.getSampleRate();
+    
+    //create a vector to store the magnitudes of each filter
+    std::vector<double> mags;
+    
+    //compute one magnitude per pixel, length of entire magnitude vector is equal to pixel length of the width of the response area.
+    mags.resize(w);
+    
+    //iterate through each pixel and compute the magnitude at that frequency
+    for (int i = 0; i < w; i++)
+    {
+        //starting gain of 1
+        double mag = 1.f;
+        
+        //helper function to map magnitudes from pixel space to frequency space
+        auto freq = mapToLog10(double(i) / double (w), 20.0, 22000.0);
+        
+        //call magnitude function with freq and multiply the results by mag, make sure band isn't bypassed.
+        if(!monoChain.isBypassed<ChainPositions::rumble>())
+            mag *= rumble.coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        
+        if(!monoChain.isBypassed<ChainPositions::low>())
+            mag *= low.coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        
+        if(!monoChain.isBypassed<ChainPositions::lowMid>())
+            mag *= lowMid.coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        
+        if(!monoChain.isBypassed<ChainPositions::highMid>())
+            mag *= highMid.coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        
+        if(!monoChain.isBypassed<ChainPositions::high>())
+            mag *= high.coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        
+        if(!monoChain.isBypassed<ChainPositions::air>())
+            mag *= air.coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        
+        if(!highPass.isBypassed<0>())
+            mag *= highPass.get<0>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        if(!highPass.isBypassed<1>())
+            mag *= highPass.get<1>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        if(!highPass.isBypassed<2>())
+            mag *= highPass.get<2>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        if(!highPass.isBypassed<3>())
+            mag *= highPass.get<3>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        
+        if(!lowPass.isBypassed<0>())
+            mag *= lowPass.get<0>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        if(!lowPass.isBypassed<1>())
+            mag *= lowPass.get<1>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        if(!lowPass.isBypassed<2>())
+            mag *= lowPass.get<2>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        if(!lowPass.isBypassed<3>())
+            mag *= lowPass.get<3>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+        
+        //convert gain to decibels
+        mags[i] = Decibels::gainToDecibels(mag);
+    }
+    
+    //create a path in order to convert vector of magnitudes into a path
+    Path responseCurve;
+    
+    const double outputMin = responseArea.getBottom();
+    const double outputMax = responseArea.getY();
+    auto map = [outputMin, outputMax](double input)
+    {
+        return jmap(input, -24.0, 24.0, outputMin, outputMax);
+    };
+    
+    responseCurve.startNewSubPath(responseArea.getX(), map(mags.front()));
+    
+    for(size_t i = 1; i < mags.size(); i++)
+    {
+        responseCurve.lineTo(responseArea.getX() + i, map(mags[i]));
+    }
+    
+    g.setColour(Colours::orange);
+    g.drawRoundedRectangle(responseArea.toFloat(), 4.f, 1.f);
+    
+    g.setColour(Colours::white);
+    g.strokePath(responseCurve, PathStrokeType(2.f));
 }
 
 //here is where the positions of the gui components are layed out in the plugin window
@@ -106,6 +203,24 @@ void RuckusEQAudioProcessorEditor::resized()
     lowPassFreqSlider.setBounds(lowPassArea.removeFromTop(lowPassArea.getHeight() * 0.7));
     lowPassSlopeSlider.setBounds(lowPassArea);
 
+}
+
+void RuckusEQAudioProcessorEditor::parameterValueChanged(int parameterIndex, float newValue)
+{
+    //set atomic flag to true if a plugin parameter is changed
+    parametersChanged.set(true);
+}
+
+//check if the parameters have been changed in the timer callback
+void RuckusEQAudioProcessorEditor::timerCallback()
+{
+    //only refresh the curve if a change has been made- if a change has been made set the parametersChanged back to false so the curve isn't being continuously refreshed. 
+    if (parametersChanged.compareAndSetBool(false, true))
+    {
+        //update monochain
+        
+        //signal a repaint so a new response curve is drawn
+    }
 }
 
 std::vector<juce::Component*> RuckusEQAudioProcessorEditor::getComps()

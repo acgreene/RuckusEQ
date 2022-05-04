@@ -237,46 +237,71 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
     return settings;
 }
 
+Coefficients makeRumbleFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.rumbleFreq, chainSettings.rumbleQuality, juce::Decibels::decibelsToGain(chainSettings.rumbleGainInDecibels));
+}
+Coefficients makeLowFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.lowFreq, chainSettings.lowQuality, juce::Decibels::decibelsToGain(chainSettings.lowGainInDecibels));
+}
+Coefficients makeLowMidFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.lowMidFreq, chainSettings.lowMidQuality, juce::Decibels::decibelsToGain(chainSettings.lowMidGainInDecibels));
+}
+Coefficients makeHighMidFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.highMidFreq, chainSettings.highMidQuality, juce::Decibels::decibelsToGain(chainSettings.highMidGainInDecibels));
+}
+Coefficients makeHighFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.highFreq, chainSettings.highQuality, juce::Decibels::decibelsToGain(chainSettings.highGainInDecibels));
+}
+Coefficients makeAirFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.airFreq, chainSettings.airQuality, juce::Decibels::decibelsToGain(chainSettings.airGainInDecibels));
+}
+
 void RuckusEQAudioProcessor::updateBandPassFilter(const ChainSettings & chainSettings)
 {
     //rumble
-    auto rumbleCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.rumbleFreq, chainSettings.rumbleQuality, juce::Decibels::decibelsToGain(chainSettings.rumbleGainInDecibels));
+    auto rumbleCoefficients = makeRumbleFilter(chainSettings, getSampleRate());
     
     updateCoefficients(leftChain.get<ChainPositions::rumble>().coefficients, rumbleCoefficients);
     updateCoefficients(rightChain.get<ChainPositions::rumble>().coefficients, rumbleCoefficients);
     
     //lows
-    auto lowCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.lowFreq, chainSettings.lowQuality, juce::Decibels::decibelsToGain(chainSettings.lowGainInDecibels));
+    auto lowCoefficients = makeLowFilter(chainSettings, getSampleRate());
     
     updateCoefficients(leftChain.get<ChainPositions::low>().coefficients, lowCoefficients);
     updateCoefficients(rightChain.get<ChainPositions::low>().coefficients, lowCoefficients);
     
     //low-mids
-    auto lowMidCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.lowMidFreq, chainSettings.lowMidQuality, juce::Decibels::decibelsToGain(chainSettings.lowMidGainInDecibels));
+    auto lowMidCoefficients = makeLowMidFilter(chainSettings, getSampleRate());
     
     updateCoefficients(leftChain.get<ChainPositions::lowMid>().coefficients, lowMidCoefficients);
     updateCoefficients(rightChain.get<ChainPositions::lowMid>().coefficients, lowMidCoefficients);
     
     //high-mids
-    auto highMidCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.highMidFreq, chainSettings.highMidQuality, juce::Decibels::decibelsToGain(chainSettings.highMidGainInDecibels));
+    auto highMidCoefficients = makeHighMidFilter(chainSettings, getSampleRate());
     
     updateCoefficients(leftChain.get<ChainPositions::highMid>().coefficients, highMidCoefficients);
     updateCoefficients(rightChain.get<ChainPositions::highMid>().coefficients, highMidCoefficients);
     
     //highs
-    auto highCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.highFreq, chainSettings.highQuality, juce::Decibels::decibelsToGain(chainSettings.highGainInDecibels));
+    auto highCoefficients = makeHighFilter(chainSettings, getSampleRate());
     
     updateCoefficients(leftChain.get<ChainPositions::high>().coefficients, highCoefficients);
     updateCoefficients(rightChain.get<ChainPositions::high>().coefficients, highCoefficients);
     
     //air
-    auto airCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.airFreq, chainSettings.airQuality, juce::Decibels::decibelsToGain(chainSettings.airGainInDecibels));
+    auto airCoefficients = makeAirFilter(chainSettings, getSampleRate());
     
     updateCoefficients(leftChain.get<ChainPositions::air>().coefficients, airCoefficients);
     updateCoefficients(rightChain.get<ChainPositions::air>().coefficients, airCoefficients);
 }
 
-void RuckusEQAudioProcessor::updateCoefficients(Coefficients& old, const Coefficients &replacements)
+void updateCoefficients(Coefficients& old, const Coefficients &replacements)
 {
     *old = *replacements;
 }

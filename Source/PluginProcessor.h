@@ -69,6 +69,16 @@ enum ChainPositions
     lowPass
 };
 
+using Coefficients = Filter::CoefficientsPtr;
+void updateCoefficients(Coefficients& old, const Coefficients& replacements);
+
+Coefficients makeRumbleFilter(const ChainSettings& chainSettings, double sampleRate);
+Coefficients makeLowFilter(const ChainSettings& chainSettings, double sampleRate);
+Coefficients makeLowMidFilter(const ChainSettings& chainSettings, double sampleRate);
+Coefficients makeHighMidFilter(const ChainSettings& chainSettings, double sampleRate);
+Coefficients makeHighFilter(const ChainSettings& chainSettings, double sampleRate);
+Coefficients makeAirFilter(const ChainSettings& chainSettings, double sampleRate);
+
 //==============================================================================
 /**
 */
@@ -124,9 +134,6 @@ private:
     
     //functions below prevent repeating blocks of code in prepareToPlay and processBlock.
     void updateBandPassFilter(const ChainSettings& chainSettings);
-    
-    using Coefficients = Filter::CoefficientsPtr;
-    static void updateCoefficients(Coefficients& old, const Coefficients &replacements);
     
     template<int index, typename ChainType, typename CoefficientType>
     void update(ChainType& chain, const CoefficientType& coefficients)
