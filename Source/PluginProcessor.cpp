@@ -308,7 +308,7 @@ void updateCoefficients(Coefficients& old, const Coefficients &replacements)
 
 void RuckusEQAudioProcessor::updateHighPassFilters(const ChainSettings &chainSettings)
 {
-    auto highPassCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.highPassFreq, getSampleRate(), 2*(chainSettings.highPassSlope + 1));
+    auto highPassCoefficients = makeHighPassFilter(chainSettings, getSampleRate());
     
     auto& leftHighPass = leftChain.get<ChainPositions::highPass>();
     updatePassFilter(leftHighPass, highPassCoefficients, chainSettings.highPassSlope);
@@ -319,7 +319,7 @@ void RuckusEQAudioProcessor::updateHighPassFilters(const ChainSettings &chainSet
 
 void RuckusEQAudioProcessor::updateLowPassFilters(const ChainSettings &chainSettings)
 {
-    auto lowPassCoefficients = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainSettings.lowPassFreq, getSampleRate(), 2*(chainSettings.lowPassSlope + 1));
+    auto lowPassCoefficients = makeLowPassFilter(chainSettings, getSampleRate());
     
     auto& leftLowPass = leftChain.get<ChainPositions::lowPass>();
     updatePassFilter(leftLowPass, lowPassCoefficients, chainSettings.lowPassSlope);

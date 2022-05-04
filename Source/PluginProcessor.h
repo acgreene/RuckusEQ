@@ -79,6 +79,53 @@ Coefficients makeHighMidFilter(const ChainSettings& chainSettings, double sample
 Coefficients makeHighFilter(const ChainSettings& chainSettings, double sampleRate);
 Coefficients makeAirFilter(const ChainSettings& chainSettings, double sampleRate);
 
+template<int index, typename ChainType, typename CoefficientType>
+void update(ChainType& chain, const CoefficientType& coefficients)
+{
+    updateCoefficients(chain.template get<index>().coefficients, coefficients[index]);
+    chain.template setBypassed<index>(false);
+}
+
+template<typename ChainType, typename CoefficientType>
+void updatePassFilter(ChainType& chain, const CoefficientType& coefficients, const Slope& slope)
+{
+    chain.template setBypassed<0>(true);
+    chain.template setBypassed<1>(true);
+    chain.template setBypassed<2>(true);
+    chain.template setBypassed<3>(true);
+    
+    switch(slope)
+    {
+        case Slope_48:
+        {
+            update<3>(chain, coefficients);
+        }
+        case Slope_36:
+        {
+            update<2>(chain, coefficients);
+        }
+        case Slope_24:
+        {
+            update<1>(chain, coefficients);
+        }
+        case Slope_12:
+        {
+            update<0>(chain, coefficients);
+        }
+    }
+}
+
+//since we're using this function in both pluginProcessor and pluginEditor, use inline keyword. otherwise compiler will create a definition for this function everywhere the header file is included and the linker will not know which compiled cpp file to use for the definition.
+inline auto makeHighPassFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    return juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.highPassFreq, sampleRate, 2*(chainSettings.highPassSlope + 1));
+}
+
+inline auto makeLowPassFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    return juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainSettings.lowPassFreq, sampleRate, 2*(chainSettings.lowPassSlope + 1));
+}
+
 //==============================================================================
 /**
 */
@@ -134,42 +181,6 @@ private:
     
     //functions below prevent repeating blocks of code in prepareToPlay and processBlock.
     void updateBandPassFilter(const ChainSettings& chainSettings);
-    
-    template<int index, typename ChainType, typename CoefficientType>
-    void update(ChainType& chain, const CoefficientType& coefficients)
-    {
-        updateCoefficients(chain.template get<index>().coefficients, coefficients[index]);
-        chain.template setBypassed<index>(false);
-    }
-    
-    template<typename ChainType, typename CoefficientType>
-    void updatePassFilter(ChainType& chain, const CoefficientType& coefficients, const Slope& slope)
-    {
-        chain.template setBypassed<0>(true);
-        chain.template setBypassed<1>(true);
-        chain.template setBypassed<2>(true);
-        chain.template setBypassed<3>(true);
-        
-        switch(slope)
-        {
-            case Slope_48:
-            {
-                update<3>(chain, coefficients);
-            }
-            case Slope_36:
-            {
-                update<2>(chain, coefficients);
-            }
-            case Slope_24:
-            {
-                update<1>(chain, coefficients);
-            }
-            case Slope_12:
-            {
-                update<0>(chain, coefficients);
-            }
-        }
-    }
     
     void updateHighPassFilters(const ChainSettings& chainSettings);
     void updateLowPassFilters(const ChainSettings& chainSettings);

@@ -40,11 +40,28 @@ lowPassSlopeSliderAttachment(audioProcessor.apvts, "LowPass Slope", lowPassSlope
     {
         addAndMakeVisible(comp);
     }
+    
+    //listen for when parameters change, grab parameters from audio processor and add ourselves as a listener to them.
+    const auto& params = audioProcessor.getParameters();
+    for(auto param : params)
+    {
+        param->addListener(this);
+    }
+    
+    //start timer to check every 60Hz to see if we need to repaint the response curve
+    startTimerHz(60);
+    
     setSize (800, 533);
 }
 
 RuckusEQAudioProcessorEditor::~RuckusEQAudioProcessorEditor()
 {
+    //deregister as a listener when the destructor is called
+    const auto& params = audioProcessor.getParameters();
+    for(auto param : params)
+    {
+        param->removeListener(this);
+    }
 }
 
 //==============================================================================
@@ -218,8 +235,34 @@ void RuckusEQAudioProcessorEditor::timerCallback()
     if (parametersChanged.compareAndSetBool(false, true))
     {
         //update monochain
+        auto chainSettings = getChainSettings(audioProcessor.apvts);
+        
+        auto rumbleCoefficients = makeRumbleFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::rumble>().coefficients, rumbleCoefficients);
+        
+        auto lowCoefficients = makeLowFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::low>().coefficients, lowCoefficients);
+        
+        auto lowMidCoefficients = makeLowMidFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::lowMid>().coefficients, lowMidCoefficients);
+        
+        auto highMidCoefficients = makeHighMidFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::highMid>().coefficients, highMidCoefficients);
+        
+        auto highCoefficients = makeHighFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::high>().coefficients, highCoefficients);
+        
+        auto airCoefficients = makeAirFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::air>().coefficients, airCoefficients);
+        
+        auto highPassCoefficients = makeHighPassFilter(chainSettings, audioProcessor.getSampleRate());
+        updatePassFilter(monoChain.get<ChainPositions::highPass>(), highPassCoefficients, chainSettings.highPassSlope);
+        
+        auto lowPassCoefficients = makeLowPassFilter(chainSettings, audioProcessor.getSampleRate());
+        updatePassFilter(monoChain.get<ChainPositions::lowPass>(), lowPassCoefficients, chainSettings.lowPassSlope);
         
         //signal a repaint so a new response curve is drawn
+        repaint();
     }
 }
 
