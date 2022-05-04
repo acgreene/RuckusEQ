@@ -71,6 +71,24 @@ private:
     
     CustomHorizontalSlider highPassSlopeSlider, lowPassSlopeSlider;
     
+    //connect sliders to dsp parameters
+    using APVTS = juce::AudioProcessorValueTreeState;
+    using Attachment = APVTS::SliderAttachment;
+    
+    Attachment  highPassFreqSliderAttachment,
+                rumbleFreqSliderAttachment, rumbleGainSliderAttachment,
+                lowFreqSliderAttachment, lowGainSliderAttachment,
+                lowMidFreqSliderAttachment, lowMidGainSliderAttachment,
+                highMidFreqSliderAttachment, highMidGainSliderAttachment,
+                highFreqSliderAttachment, highGainSliderAttachment,
+                airFreqSliderAttachment, airGainSliderAttachment,
+                lowPassFreqSliderAttachment, rumbleQualitySliderAttachment,
+                lowQualitySliderAttachment, lowMidQualitySliderAttachment,
+                highMidQualitySliderAttachment, highQualitySliderAttachment,
+                airQualitySliderAttachment, highPassSlopeSliderAttachment,
+                lowPassSlopeSliderAttachment;
+    
+    
     //function that will put all the sliders in a vector so we can iterate through them easily and apply processing on them as a batch if needed.
     std::vector<juce::Component*> getComps();
 

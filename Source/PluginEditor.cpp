@@ -11,7 +11,29 @@
 
 //==============================================================================
 RuckusEQAudioProcessorEditor::RuckusEQAudioProcessorEditor (RuckusEQAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+    : AudioProcessorEditor (&p), audioProcessor (p),
+highPassFreqSliderAttachment(audioProcessor.apvts, "HighPass Freq", highPassFreqSlider),
+rumbleFreqSliderAttachment(audioProcessor.apvts, "Rumble Freq", rumbleFreqSlider),
+rumbleGainSliderAttachment(audioProcessor.apvts, "Rumble Gain", rumbleGainSlider),
+lowFreqSliderAttachment(audioProcessor.apvts, "Low Freq", lowFreqSlider),
+lowGainSliderAttachment(audioProcessor.apvts, "Low Gain", lowGainSlider),
+lowMidFreqSliderAttachment(audioProcessor.apvts, "LowMid Freq", lowMidFreqSlider),
+lowMidGainSliderAttachment(audioProcessor.apvts, "LowMid Gain", lowMidGainSlider),
+highMidFreqSliderAttachment(audioProcessor.apvts, "HighMid Freq", highMidFreqSlider),
+highMidGainSliderAttachment(audioProcessor.apvts, "HighMid Gain", highMidGainSlider),
+highFreqSliderAttachment(audioProcessor.apvts, "High Freq", highFreqSlider),
+highGainSliderAttachment(audioProcessor.apvts, "High Gain", highGainSlider),
+airFreqSliderAttachment(audioProcessor.apvts, "Air Freq", airFreqSlider),
+airGainSliderAttachment(audioProcessor.apvts, "Air Gain", airGainSlider),
+lowPassFreqSliderAttachment(audioProcessor.apvts, "LowPass Freq", lowPassFreqSlider),
+rumbleQualitySliderAttachment(audioProcessor.apvts, "Rumble Q", rumbleQualitySlider),
+lowQualitySliderAttachment(audioProcessor.apvts, "Low Q", lowQualitySlider),
+lowMidQualitySliderAttachment(audioProcessor.apvts, "LowMid Q", lowMidQualitySlider),
+highMidQualitySliderAttachment(audioProcessor.apvts, "HighMid Q", highMidQualitySlider),
+highQualitySliderAttachment(audioProcessor.apvts, "High Q", highQualitySlider),
+airQualitySliderAttachment(audioProcessor.apvts, "Air Q", airQualitySlider),
+highPassSlopeSliderAttachment(audioProcessor.apvts, "HighPass Slope", highPassSlopeSlider),
+lowPassSlopeSliderAttachment(audioProcessor.apvts, "LowPass Slope", lowPassSlopeSlider)
 {
     //batch add all of the sliders to the gui
     for(auto* comp: getComps())
