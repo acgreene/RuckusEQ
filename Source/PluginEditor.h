@@ -91,6 +91,9 @@ private:
     
     //function that will put all the sliders in a vector so we can iterate through them easily and apply processing on them as a batch if needed.
     std::vector<juce::Component*> getComps();
+    
+    //add an instance of the monochain from plugin processor so we can use it's data to draw the response curve.
+    MonoChain monoChain;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RuckusEQAudioProcessorEditor)
 };

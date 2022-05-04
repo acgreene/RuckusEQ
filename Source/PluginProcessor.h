@@ -46,6 +46,29 @@ struct ChainSettings
 // define helper function that will give us all parameter values in the data struct
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
 
+//create Filter type alias to make code cleaner
+//filter has a response of 12 dB/Oct when it's configured as a HPF or LPF
+using Filter = juce::dsp::IIR::Filter<float>;
+
+//to do dsp in juce we need to create a series of processing, defined as a processing chain, and then pass a context through it.
+//if we use four 12 dB/Oct filters, we can create a 48 dB/Oct filter.
+using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+
+//the entire mono signal path is HPF -> rumble -> low -> lowMid -> highMid -> high -> air -> LPF
+using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, Filter, Filter, Filter, Filter, Filter, CutFilter>;
+
+enum ChainPositions
+{
+    highPass,
+    rumble,
+    low,
+    lowMid,
+    highMid,
+    high,
+    air,
+    lowPass
+};
+
 //==============================================================================
 /**
 */
@@ -96,31 +119,8 @@ public:
     juce::AudioProcessorValueTreeState apvts {*this, nullptr, "Parameters", createParameterLayout()};
 
 private:
-    //create Filter type alias to make code cleaner
-    //filter has a response of 12 dB/Oct when it's configured as a HPF or LPF
-    using Filter = juce::dsp::IIR::Filter<float>;
-    
-    //to do dsp in juce we need to create a series of processing, defined as a processing chain, and then pass a context through it.
-    //if we use four 12 dB/Oct filters, we can create a 48 dB/Oct filter.
-    using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
-    
-    //the entire mono signal path is HPF -> rumble -> low -> lowMid -> highMid -> high -> air -> LPF
-    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, Filter, Filter, Filter, Filter, Filter, CutFilter>;
-    
     //two instances of mono to create stereo.
     MonoChain leftChain, rightChain;
-    
-    enum ChainPositions
-    {
-        highPass,
-        rumble,
-        low,
-        lowMid,
-        highMid,
-        high,
-        air,
-        lowPass
-    };
     
     //functions below prevent repeating blocks of code in prepareToPlay and processBlock.
     void updateBandPassFilter(const ChainSettings& chainSettings);
